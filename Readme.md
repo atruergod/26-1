@@ -14,3 +14,9 @@
 - PDF, PMF: Gaussian, Beta, Bernoulli, Gamma, Uniform
 
 #### Week 3
+- 논문 발제 : Usage of statistical analysis in research papers
+- CLT, simulation t-Test
+- Bayesian Inference by posterior simulation
+
+#### Week 4
+- 
