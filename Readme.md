@@ -8,7 +8,8 @@
 2. python in a day: `https://wikidocs.net/book/1`
 #### Week 2
 - Unicode
-- CLT (Central Limit Theorem) 
+- CLT (Central Limit Theorem)
+- Concepts of z-Test, t-Test and its real meaning.
 - Random Sampling, Histogram/KDE
 - PDF, PMF: Gaussian, Beta, Bernoulli, Gamma, Uniform
 
