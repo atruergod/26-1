@@ -103,8 +103,31 @@ def main():
     df_combined["RSES_Total"] = data[:, 0]
     df_combined["RSSIS_Total"] = data[:, 1]
     df_combined["ISS_Total"] = data[:, 2]    
+
+    # --- ADD COVARIATES SIMULATION (Empirical Ratios from Paper) ---
+    # Gender (1:Male, 2:Female) | Prob: 0.477, 0.523
+    cov_gender = np.random.choice([1, 2], size=N, p=[0.477, 0.523])
+    # Academic Year (1-4) | Prob: 0.096, 0.404, 0.256, 0.244
+    cov_year = np.random.choice([1, 2, 3, 4], size=N, p=[0.096, 0.404, 0.256, 0.244])
+    # TOPIK (0:Beg, 1:Adv) | Prob: 0.124, 0.876
+    cov_topik = np.random.choice([0, 1], size=N, p=[0.124, 0.876])
+    # Economic Status (1:Low, 2:Med, 3:High) | Prob: 0.063, 0.736, 0.201
+    cov_eco = np.random.choice([1, 2, 3], size=N, p=[0.063, 0.736, 0.201])
+    
+    df_covariates = pd.DataFrame({
+        "Gender": cov_gender,
+        "Academic_Year": cov_year,
+        "TOPIK_Level": cov_topik,
+        "Economic_Status": cov_eco
+    })
+    
+    # Merge covariates into the combined dataframe
+    df_combined = pd.concat([df_combined, df_covariates], axis=1)
+
     # Save CSVs
-    output_dir = "c:\\Users\\yongduek\\Downloads\\shim"
+    output_dir = "."  # Fix hardcoded path to current directory
+    os.makedirs(output_dir, exist_ok=True)
+    df_covariates.to_csv(os.path.join(output_dir, "covariates_simulated.csv"), index=False)
     df_rses.to_csv(os.path.join(output_dir, "rses_simulated.csv"), index=False)
     df_rssis.to_csv(os.path.join(output_dir, "rssis_simulated.csv"), index=False)
     df_iss.to_csv(os.path.join(output_dir, "iss_simulated.csv"), index=False)

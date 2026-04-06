@@ -29,6 +29,7 @@ def main():
     df_rses = pd.read_csv("rses_simulated.csv")
     df_rssis = pd.read_csv("rssis_simulated.csv")
     df_iss = pd.read_csv("iss_simulated.csv")
+    df_covs = pd.read_csv("covariates_simulated.csv")
     
     # Reverse-coding handling for items marked with _REV
     for col in df_rses.columns:
@@ -43,6 +44,9 @@ def main():
     Y = df_rssis.sum(axis=1).values
     M = df_iss.sum(axis=1).values
     N = len(X)
+    
+    # Extract covariates into a list of 1D arrays for the design matrix
+    C_mat = [df_covs[col].values for col in df_covs.columns]
     
     # Store in a single DF for correlation and plotting
     df = pd.DataFrame({
@@ -78,19 +82,19 @@ def main():
         
     # --------- 4. MEDIATION ANALYSIS ---------
     print("\n" + "=" * 60)
-    print("4. Mediation Analysis (OLS, Unadjusted due to absent covariates)")
+    print("4. Mediation Analysis (OLS, Adjusted for covariates: Gender, Year, TOPIK, Eco)")
     print("=" * 60)
     
-    # Step 1: Y = c X  (Total Effect)
-    c1, r2_total = ols(design_matrix([X]), Y)
+    # Step 1: Y = c X + Covariates (Total Effect)
+    c1, r2_total = ols(design_matrix([X] + C_mat), Y)
     total_effect = c1[1]
     
-    # Step 2: M = a X
-    c2, r2_m = ols(design_matrix([X]), M)
+    # Step 2: M = a X + Covariates
+    c2, r2_m = ols(design_matrix([X] + C_mat), M)
     a_path = c2[1]
     
-    # Step 3: Y = c' X + b M (Direct and B path)
-    c3, r2_final = ols(design_matrix([X, M]), Y)
+    # Step 3: Y = c' X + b M + Covariates (Direct and B path)
+    c3, r2_final = ols(design_matrix([X, M] + C_mat), Y)
     direct_effect = c3[1]
     b_path = c3[2]
     
@@ -108,12 +112,15 @@ def main():
     np.random.seed(2025)
     boots = 2000
     ind_effects = []
+    
+    cov_cols = df_covs.columns
     for _ in range(boots):
         idx = np.random.choice(N, N, replace=True)
         X_b, Y_b, M_b = X[idx], Y[idx], M[idx]
+        C_mat_b = [df_covs[col].values[idx] for col in cov_cols]
         
-        ca, _ = ols(design_matrix([X_b]), M_b)
-        cb, _ = ols(design_matrix([X_b, M_b]), Y_b)
+        ca, _ = ols(design_matrix([X_b] + C_mat_b), M_b)
+        cb, _ = ols(design_matrix([X_b, M_b] + C_mat_b), Y_b)
         ind_effects.append(ca[1] * cb[2])
         
     ci_lower, ci_upper = np.percentile(ind_effects, [2.5, 97.5])
