@@ -223,3 +223,7 @@ simulations/kim2025/data_covariates_simulated.csv
 simulations/kim2025/data_iss_simulated.csv
 simulations/kim2025/data_rses_simulated.csv
 simulations/kim2025/data_rssis_simulated.csv
+misc/linear_regression.exe
+misc/linear_regression.stan
+misc/multilevel_regression.stan
+misc/multilevel_regression.exe
