@@ -251,3 +251,5 @@ irt/rasch_1pl_mcmc_compare.exe
 irt/rasch_1pl_mcmc_compare.stan
 irt/rasch_1pl_mle.exe
 irt/rasch_1pl_mle.stan
+misc/multilevel_group_intercept_slope.stan
+misc/multilevel_group_intercept_slope.exe
