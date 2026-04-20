@@ -1,0 +1,9 @@
+- use $ and $$ in latex equations in markdown
+- provide Rasch, PCM (decomposed form), MFRM, MFPCM equations
+- explain two PCM models: decomposed and combined (with sum-to-zero constraint)
+- Use the following notations.
+  - \theta : person ability
+  - \beta: item parameter
+  - \rho: severity
+  - \tau: step difficulty
+- 
