@@ -1,0 +1,244 @@
+\PassOptionsToPackage{hidelinks}{hyperref}
+\documentclass[a4paper,10pt]{oblivoir}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{setspace}
+\usepackage{geometry}
+\usepackage{caption}
+\usepackage{float}
+\geometry{a4paper, top=25mm, bottom=25mm, left=25mm, right=25mm}
+\setstretch{1.8}
+\setcounter{secnumdepth}{0}
+\graphicspath{{./}}
+
+\begin{document}
+\title{중국인 유학생의 한국어 쓰기 태도 인과 구조: 베이지안 부분 신용 모형–구조 방정식 모형(PCM-SEM) 분석}
+\maketitle
+
+\textbf{Causal Structure of Korean Writing Attitudes among Chinese International Students: A Bayesian Partial Credit Model–Structural Equation Model (PCM-SEM) Analysis}
+
+
+\subsection{초록}
+
+[데이터 수집 및 분석 완료 후 작성]
+
+\textbf{주제어}: 중국인 유학생, 한국어 쓰기 태도, 베이지안 PCM-SEM, 인과 매개, 완전 매개, MCMC
+
+
+\subsection{1. 서론}
+
+한국 내 중국인 유학생 수는 2023년 기준 약 67,000명으로 전체 외국인 유학생의 44\%를 차지한다(교육부, 2023). 이들 대부분은 학문 목적으로 한국어를 학습하며, 한국어 쓰기 능력은 대학 학업 수행의 핵심 역량이다. 그러나 중국인 유학생의 쓰기 태도를 인과 경로의 관점에서 체계적으로 분석한 연구는 드물다.
+
+주월랑(2022)은 외국인 유학생 86명(13개국 출신)을 대상으로 쓰기 태도를 쓰기인식(Cognition), 쓰기반응(Affect), 수행태도(Behavior)의 세 하위 구인으로 측정하고 학습자 배경 변수에 따른 집단 차이를 분석하였다. 그러나 이 연구는 세 구인 간의 인과 경로를 직접 검증하지 않았으며, 방법론적으로 합산 점수 OLS를 사용함으로써 문항 수준 측정 오차를 무시하는 회귀 감쇠 편향의 문제를 안고 있다.
+
+본 연구는 두 가지 측면에서 선행 연구를 확장한다. 첫째, 연구 대상을 중국인 유학생으로 집중하여 이 집단의 쓰기 태도 인과 구조를 규명한다. 중국인 유학생은 한국어 쓰기 교육의 가장 중요한 수혜 집단임에도 불구하고, 이들의 쓰기 태도 메커니즘에 대한 독립적 연구는 부족하다. 둘째, 별도의 방법론 연구(연구 1; t1\_paper 참조)에서 타당화된 베이지안 부분 신용 모형–구조 방정식 모형(PCM-SEM)을 적용하여, 문항 수준 측정 오차를 통제하고 인과 경로의 방향성과 크기를 확률적으로 추정한다.
+
+연구 문제는 다음과 같다.
+
+RQ1. 중국인 유학생의 쓰기인식이 쓰기반응에 미치는 영향($\beta_1$)은 유의한가?
+
+RQ2. 쓰기반응이 수행태도에 미치는 영향($\beta_2$)은 유의한가?
+
+RQ3. 쓰기인식이 수행태도에 미치는 직접 효과($\gamma_1$)는 쓰기반응의 완전 매개 후 유의하지 않게 되는가?
+
+RQ4. 성별이 쓰기반응 및 수행태도에 미치는 영향은 유의한가?
+
+
+\subsection{2. 이론적 배경}
+
+\subsubsection{2.1 쓰기 태도의 구조와 인과 경로}
+
+본 연구는 쓰기 태도를 인지적·정서적·행동적 요소가 위계적으로 연결된 구조로 상정한다. 이를 위해 태도 구성 요소의 ABC 모델(Ajzen \& Fishbein, 1977)과 제2언어 습득 이론의 정의적 여과기(Affective Filter) 가설(Krashen, 1982)을 결합하여 다음과 같은 인과 경로를 설정하였다.
+
+\textbf{쓰기인식(Cognition, $X$)}은 쓰기의 학문적 가치와 필요성에 대한 지적 판단을 의미하며, 태도 형성의 출발점이다. \textbf{쓰기반응(Affect, $M$)}은 쓰기에 대한 즐거움, 자신감, 불안 등 정서적 차원을 포함한다. 인지적 가치 인식이 정서적 반응을 매개하지 않으면 실제 행동 변화로 이어지기 어렵다. \textbf{수행태도(Behavior, $Y$)}는 독자 고려, 고쳐쓰기 등 실제 쓰기 수행에 관한 행동적 의지를 나타낸다.
+
+\[X(\text{쓰기인식}) \rightarrow M(\text{쓰기반응}) \rightarrow Y(\text{수행태도})\]
+
+자기결정성 이론(Self-Determination Theory; Deci \& Ryan, 1985)의 관점에서도 내재적 동기 형성에 정의적 반응이 필수적 매개 역할을 담당한다. 쓰기의 중요성을 인지하더라도 정서적으로 긍정적 반응을 형성하지 못하면 능동적 수행태도로 전환되지 않는다는 매개 경로 가설이 수립된다.
+
+\subsubsection{2.2 중국인 유학생과 한국어 쓰기}
+
+중국인 유학생의 한국어 쓰기 학습 맥락은 몇 가지 고유한 특징을 가진다. 중국어와 한국어는 표기 체계가 상이하며, 학문적 글쓰기의 문화적 관습—서론-본론-결론 구조의 명시성, 인용 방식 등—에서 차이가 있다(Kaplan, 1966). 또한 중국인 유학생의 한국어 쓰기 동기는 학업 요건 충족이라는 외재적 동기가 강하게 작용할 수 있으며, 이는 쓰기반응(정서적 차원)과 수행태도(행동 의지) 간의 연결 구조에 영향을 미칠 수 있다.
+
+이러한 맥락을 고려할 때, 중국인 유학생 집단에서도 쓰기인식\ensuremath{\rightarrow}쓰기반응\ensuremath{\rightarrow}수행태도의 순차적 인과 경로가 작동하는지를 검증하는 것은 교육적으로 중요한 의미를 가진다.
+
+\subsubsection{2.3 베이지안 PCM-SEM의 역할}
+
+합산 점수 OLS는 측정 오차로 인한 회귀 감쇠 편향을 내포하며, 이 편향은 표본 크기가 증가해도 해소되지 않는다(연구 1 참조). PCM-SEM은 순서형 문항 반응을 부분 신용 모형(PCM; Masters, 1982)으로 직접 모형화함으로써 이 문제를 해결한다.
+
+베이지안 추론은 사전 분포를 통해 선행 연구 지식을 체계적으로 통합하며, 사후 분포에서 직접 확률적 진술이 가능하다. 소표본(N\ensuremath{\approx}100) 조건에서 사전 정보의 활용은 추정 정밀도를 실질적으로 향상시킨다(Bernardo \& Smith, 1994).
+
+\subsubsection{2.4 연구 가설}
+
+선행 이론과 주월랑(2022)의 기술통계를 바탕으로 다음 가설을 설정한다.
+
+\textbf{H1}: 쓰기인식($X$)은 쓰기반응($M$)에 유의한 정적 영향을 미친다 ($\beta_1 > 0$).
+
+\textbf{H2}: 쓰기반응($M$)은 수행태도($Y$)에 유의한 정적 영향을 미친다 ($\beta_2 > 0$).
+
+\textbf{H3}: 쓰기인식이 수행태도에 미치는 직접 효과($\gamma_1$)는 유의하지 않다 (완전 매개).
+
+\textbf{H4}: 쓰기인식이 쓰기반응을 거쳐 수행태도에 미치는 간접 효과($\beta_1\beta_2$)는 유의하다.
+
+\textbf{H5}: 성별이 쓰기반응 및 수행태도에 미치는 영향은 유의하지 않다.
+
+
+\subsection{3. 연구 방법}
+
+\subsubsection{3.1 연구 참여자}
+
+연구 참여자는 한국 소재 대학교에 재학 중인 중국 국적 유학생 약 100명이다. 선정 기준은 (1) 중국 국적 보유, (2) 한국어 관련 수업 수강 중, (3) 연구 참여 자발적 동의이다. 표본 크기 N\ensuremath{\approx}100은 연구 1의 몬테카를로 분석에서 PCM-SEM이 안정적인 추정 성능을 보인 조건(N=100, 검출력 \ensuremath{\approx} 0.88\~{}0.94)에 해당한다.
+
+인구통계학적 특성(성별, 학년, 한국어 학습 기간, 전공)은 설문지 전면부에서 수집한다.
+
+\subsubsection{3.2 측정 도구}
+
+\textbf{한국어 쓰기 태도 척도}: 주월랑(2022)의 21개 문항(5점 Likert)을 원형 그대로 사용한다. 문항 구성은 쓰기인식 4문항(y1–y4), 쓰기반응 11문항(y5–y15), 수행태도 6문항(y16–y21)이며, 원논문에서 전체 Cronbach $\alpha = 0.854$로 보고되었다.
+
+문항은 "한국어로 글을 쓰는 것이 중요하다고 생각한다"(쓰기인식), "한국어로 글을 쓸 때 즐겁다"(쓰기반응), "한국어 글쓰기에서 독자를 고려한다"(수행태도)와 같은 형식이며, 원논문의 검증된 문항을 그대로 적용함으로써 측정 동등성을 확보한다.
+
+\textbf{응답 형식}: 1점(전혀 그렇지 않다) \~{} 5점(매우 그렇다).
+
+\subsubsection{3.3 분석 방법}
+
+\textbf{모형 보정}: 연구 1(t1 연구)의 몬테카를로 및 시뮬레이션 결과를 바탕으로 PCM 임계값 오프셋 초기값을 설정한다($c_X=-1.194$, $c_M=-0.380$, $c_Y=-0.185$; \texttt{t2\\_calibration.json} 참조). 이 보정값은 중국인 유학생 표본에서도 원논문 수준의 응답 분포를 모형이 예측할 수 있는지를 사전 예측 분포 점검(\texttt{t2\\_model\\_check.py})을 통해 검증한 후 사용한다.
+
+\textbf{Stan 모형}: 연구 1에서 타당화된 두 Stan 모형—약한 사전 분포(\texttt{sem\\_pcm\\_v2.stan})와 강한 사전 분포(\texttt{sem\\_pcm\\_with\\_prior.stan})—을 그대로 적용한다. 강한 사전 분포는 원논문의 구인별 평균과 문헌 효과 크기($r \approx 0.30$\~{}$0.55$)를 반영한다.
+
+\textbf{MCMC 설정}: 4개 체인, 워밍업 1,000회, 샘플링 1,000회 (총 4,000 유효 샘플), adapt\_delta=0.92, max\_treedepth=12.
+
+\textbf{수렴 진단}: $\hat{R} \leq 1.01$, ESS\_bulk $\geq 400$, 발산 전이 0건을 수렴의 기준으로 한다.
+
+\textbf{윤리}: 본 연구는 소속 기관 생명윤리위원회(IRB) 심의를 거쳐 수행한다. 참여자에게 연구 목적과 익명성 보장을 설명하고 서면 동의를 받는다.
+
+
+\subsection{4. 결과}
+
+[데이터 수집 및 MCMC 분석(t2\_analysis.py) 완료 후 작성]
+
+아래 소절 구조에 따라 결과를 기술한다.
+
+\subsubsection{4.1 참여자 기술통계}
+
+\begin{itemize}
+  \item 전체 N, 성별 분포, 학년, 한국어 학습 기간
+  \item 구인별 복합 점수 평균 및 표준편차
+  \item Cronbach α (구인별)
+\end{itemize}
+
+\subsubsection{4.2 MCMC 수렴 진단}
+
+\begin{itemize}
+  \item $\hat{R}$, ESS\_bulk, 발산 전이 수 (t2\_convergence.csv 기반)
+  \item 표 형식 제시
+\end{itemize}
+
+\subsubsection{4.3 구조 경로 계수}
+
+\begin{itemize}
+  \item 표: 약한 vs 강한 사전 분포 모형 비교 (사후 평균, SD, 95\% CrI, P(>0))
+  \item RQ1–RQ4에 대한 검증 결과
+  \item 그림: t2\_fig\_posterior.png, t2\_fig\_path\_estimates.png
+\end{itemize}
+
+\subsubsection{4.4 매개 효과 분석}
+
+\begin{itemize}
+  \item 간접 효과 $\beta_1\beta_2$ 사후 분포
+  \item 완전 매개 vs 부분 매개 판단
+  \item $P(\beta_1>0 \wedge \beta_2>0 \mid \text{data})$
+  \item 그림: t2\_fig\_mediation.png
+\end{itemize}
+
+
+\subsection{5. 논의}
+
+[데이터 수집 및 분석 완료 후 작성]
+
+아래 주제를 중심으로 논의한다.
+
+\subsubsection{5.1 연구 가설 검증 해석}
+
+H1–H5 각각에 대한 결과 해석 및 이론적 함의. 완전 매개 결과가 확인될 경우: "쓰기의 가치를 인식하더라도 쓰기에 대한 긍정적 정서가 형성되지 않으면 능동적 수행태도로 연결되지 않는다"는 ABC 모델 및 Affective Filter 이론의 경험적 지지.
+
+\subsubsection{5.2 선행 연구(주월랑, 2022)와의 관계}
+
+연구 1(시뮬레이션)과 본 연구(실측) 결과의 비교 해석. 동일 측정 도구를 사용했을 때 중국인 유학생 표본에서 원논문과 유사한 인과 구조가 재현되는지 여부.
+
+\subsubsection{5.3 사전 분포와 소표본 추론}
+
+약한 vs 강한 사전 분포 간 결론 차이가 있다면 그 의미. 원논문 통계 기반 사전 분포의 정보적 가치.
+
+\subsubsection{5.4 교육적 함의}
+
+중국인 유학생 대상 한국어 쓰기 교육 개선을 위한 구체적 제언. 완전 매개가 확인될 경우 인지적 개입(쓰기 가치 인식 제고)만으로는 불충분하며, 정의적 개입(쓰기 불안 감소, 자신감 강화 활동)이 병행되어야 함.
+
+\subsubsection{5.5 연구의 한계}
+
+\begin{itemize}
+  \item N\ensuremath{\approx}100의 소표본 일반화 제한
+  \item 단일 대학교 편의 표집
+  \item 자기보고 측정의 사회적 바람직성 편향 가능성
+\end{itemize}
+
+
+\subsection{6. 결론}
+
+[데이터 수집 및 분석 완료 후 작성]
+
+
+\subsection{참고문헌}
+
+Ajzen, I., \& Fishbein, M. (1977). Attitude-behavior relations: A theoretical analysis and review of empirical research. \textit{Psychological Bulletin}, \textit{84}(5), 888–918.
+
+Bernardo, J. M., \& Smith, A. F. M. (1994). \textit{Bayesian theory}. Wiley.
+
+Carpenter, B., Gelman, A., Hoffman, M. D., Lee, D., Goodrich, B., Betancourt, M., \& Riddell, A. (2017). Stan: A probabilistic programming language. \textit{Journal of Statistical Software}, \textit{76}(1), 1–32.
+
+Deci, E. L., \& Ryan, R. M. (1985). \textit{Intrinsic motivation and self-determination in human behavior}. Plenum.
+
+교육부 (2023). \textit{2023년 교육기본통계}. 교육부.
+
+Kaplan, R. B. (1966). Cultural thought patterns in inter-cultural education. \textit{Language Learning}, \textit{16}(1–2), 1–20.
+
+Krashen, S. D. (1982). \textit{Principles and practice in second language acquisition}. Pergamon Press.
+
+Masters, G. N. (1982). A Rasch model for partial credit scoring. \textit{Psychometrika}, \textit{47}(2), 149–174.
+
+주월랑 (2022). 학문 목적 한국어 학습자의 한국어 쓰기 태도 연구. \textit{반교어문학회}, \textit{63}, 185–208.
+
+
+\subsection{부록 A. 소프트웨어 및 재현 가능성}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lr}
+\toprule
+파일 & 역할 \\
+\midrule
+\texttt{t2\\_model\\_check.py} & 사전 예측 점검 및 보정값 산출 \\
+\texttt{t2\\_analysis.py} & MCMC 본 분석 \\
+\texttt{t2\\_figures.py} & 그림 생성 \\
+\texttt{t2\\_data.csv} & 실측 설문 데이터 (연구자 수집) \\
+\texttt{../sem\\_pcm\\_v2.stan} & 약한 사전 Stan 모형 \\
+\texttt{../sem\\_pcm\\_with\\_prior.stan} & 강한 사전 Stan 모형 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{부록 B. 설문지}
+
+주월랑(2022) 원논문의 21개 문항을 그대로 사용. (원논문 부록 참조)
+
+\textbf{문항 구성}
+
+\begin{itemize}
+  \item 쓰기인식(y1–y4, 4문항): 한국어 쓰기의 가치와 필요성에 대한 인식
+  \item 쓰기반응(y5–y15, 11문항): 한국어 쓰기에 대한 정서적 반응 (즐거움, 자신감, 불안 등)
+  \item 수행태도(y16–y21, 6문항): 실제 쓰기 수행 시의 전략적 태도 (독자 고려, 수정 등)
+\end{itemize}
+
+\end{document}

@@ -16,8 +16,11 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn as sns
 
+# ── Korean font for Windows ──────────────────────────────
+plt.rcParams['font.family'] = 'Malgun Gothic'
+plt.rcParams['axes.unicode_minus'] = False
 sns.set_theme(style='whitegrid', font_scale=1.15)
-plt.rcParams.update({'figure.dpi': 130})
+plt.rcParams.update({'figure.dpi': 130, 'font.family': 'Malgun Gothic'})
 
 OUT_DIR = os.path.dirname(os.path.abspath(__file__))
 df      = pd.read_csv(os.path.join(OUT_DIR, 'ss_results.csv'))

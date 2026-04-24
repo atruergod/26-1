@@ -1,121 +1,197 @@
-import matplotlib.pyplot as plt
-import networkx as nx
-import platform
+"""
+sem_path_diagram_korean.py
+--------------------------
+SEM path diagram for the Korean writing attitude PCM-SEM study.
+Layout: M (mediator) raised above X and Y  →  X→Y direct arc
+        passes well below M with no overlap.
 
-import sys as _sys, os as _os
+Run on Windows:
+    python sem_path_diagram_korean.py
+Output:
+    sem_path_diagram_korean.png  (300 dpi, same folder)
+"""
+
+import os
 import warnings
-import matplotlib as _mpl, matplotlib.font_manager as _fm
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.font_manager as fm
 
-warnings.filterwarnings('ignore')
+# ── Korean font ───────────────────────────────────────────────────────────────
+def setup_korean_font():
+    for path, name in [
+        ('C:/Windows/Fonts/malgun.ttf',  'Malgun Gothic'),
+        ('C:/Windows/Fonts/gulim.ttc',   'Gulim'),
+        ('/System/Library/Fonts/AppleSDGothicNeo.ttc', 'Apple SD Gothic Neo'),
+        ('/Library/Fonts/NanumGothic.ttf', 'NanumGothic'),
+        ('/usr/share/fonts/truetype/nanum/NanumGothic.ttf', 'NanumGothic'),
+    ]:
+        if os.path.exists(path):
+            fm.fontManager.addfont(path)
+            plt.rcParams['font.family'] = name
+            plt.rcParams['font.sans-serif'] = [name, 'DejaVu Sans']
+            print(f'[font] {name}')
+            return
+    print('[font] Korean font not found.')
 
-def _setup_korean_font():
-    """Windows / macOS / Linux에서 한국어 폰트를 자동 감지해 matplotlib 기본 폰트로 설정."""
-    _candidates = {
-        'win32': [
-            ('C:/Windows/Fonts/malgun.ttf',  'Malgun Gothic'),
-            ('C:/Windows/Fonts/gulim.ttc',   'Gulim'),
-            ('C:/Windows/Fonts/batang.ttc',  'Batang'),
-        ],
-        'darwin': [
-            ('/System/Library/Fonts/AppleSDGothicNeo.ttc',               'Apple SD Gothic Neo'),
-            ('/Library/Fonts/NanumGothic.ttf',                           'NanumGothic'),
-            ('/usr/share/fonts/truetype/nanum/NanumGothic.ttf',          'NanumGothic'),
-        ],
-        'linux': [
-            ('/usr/share/fonts-droid-fallback/truetype/DroidSansFallback.ttf', 'Droid Sans Fallback'),
-            ('/usr/share/fonts/truetype/nanum/NanumGothic.ttf',                'NanumGothic'),
-            ('/usr/share/fonts/truetype/droid/DroidSansFallback.ttf',          'Droid Sans Fallback'),
-        ],
-    }
+setup_korean_font()
+plt.rcParams['axes.unicode_minus'] = False
 
-    # 깨진 Full 변종 제거 (Linux 한정 이슈)
-    _fm.fontManager.ttflist = [
-        f for f in _fm.fontManager.ttflist
-        if not (f.name == 'Droid Sans Fallback' and 'Full' in f.fname)
-    ]
+# ── Canvas ────────────────────────────────────────────────────────────────────
+fig, ax = plt.subplots(figsize=(18, 12))
+ax.set_xlim(0, 1)
+ax.set_ylim(0, 1)
+ax.axis('off')
 
-    platform = _sys.platform
-    paths = _candidates.get(platform, _candidates['linux'])
+def T(x, y):
+    """Pass-through: coordinates already in axes-fraction."""
+    return x, y
 
-    for path, name in paths:
-        if _os.path.exists(path):
-            _fm.fontManager.addfont(path)
-            # 한글 폰트를 맨 앞에 두어 제목/축라벨 한글 깨짐 방지
-            _mpl.rcParams['font.family'] = [name, 'DejaVu Sans']
-            _mpl.rcParams['font.sans-serif'] = [
-                name, 'Malgun Gothic', 'Apple SD Gothic Neo',
-                'NanumGothic', 'Droid Sans Fallback', 'DejaVu Sans'
-            ]
-            print(f"[Font] Using Korean font: {name}")
-            return name
+# ── Key positions  (triangular layout: M above X–Y baseline) ─────────────────
+PX = (0.15, 0.50)    # 쓰기인식  (Awareness)
+PM = (0.50, 0.72)    # 쓰기반응  (Reaction)   ← raised
+PY = (0.85, 0.50)    # 수행태도  (Performance)
+PG = (0.50, 0.94)    # 성별     (Gender)
 
-    # 한국어 전용 폰트를 못 찾은 경우: 가능한 sans-serif fallback 목록 구성
-    _mpl.rcParams['font.family'] = ['DejaVu Sans']
-    _mpl.rcParams['font.sans-serif'] = [
-        'Malgun Gothic', 'Apple SD Gothic Neo',
-        'NanumGothic', 'Droid Sans Fallback', 'DejaVu Sans'
-    ]
-    print('[Font] Korean font not found explicitly. Using fallback sans-serif chain.')
-    return None
+R  = 0.075           # latent circle radius
+HB = 0.040           # obs-box half-height
+WB = 0.028           # obs-box half-width
 
-_setup_korean_font()
-_mpl.rcParams['axes.unicode_minus'] = False
+# ── Observed indicator positions ──────────────────────────────────────────────
+# X indicators: y1–y4, vertical column LEFT of X
+IX = [(0.04, PX[1] - 0.09 + i * 0.06) for i in range(4)]
 
+# M indicators: y5–y15, TWO rows BELOW M
+#   Row 1 (y5–y10):  6 items centred on PM[0]
+#   Row 2 (y11–y15): 5 items centred on PM[0]
+IM_Y1 = 0.33
+IM_Y2 = 0.20
+IM = ([(PM[0] + (k - 2.5) * 0.068, IM_Y1) for k in range(6)] +
+      [(PM[0] + (k - 2.0) * 0.068, IM_Y2) for k in range(5)])
 
-G_sem = nx.DiGraph()
+# Y indicators: y16–y21, vertical column RIGHT of Y
+IY = [(0.96, PY[1] - 0.12 + i * 0.06) for i in range(6)]
 
-# 노드 정의
-latent_nodes = ['X', 'M', 'Y']
-control_node = ['Gender']
-indicators_x = [f'y{i}' for i in range(1, 5)]
-indicators_m = [f'y{i}' for i in range(5, 16)]
-indicators_y = [f'y{i}' for i in range(16, 22)]
+# ── Drawing helpers ───────────────────────────────────────────────────────────
+def circle(cx, cy, r, fc='#b8d4ea', ec='#1a3a6e', lw=2.0, z=3):
+    ax.add_patch(plt.Circle((cx, cy), r, fc=fc, ec=ec, lw=lw, zorder=z,
+                             transform=ax.transAxes, clip_on=False))
 
-G_sem.add_nodes_from(latent_nodes + control_node + indicators_x + indicators_m + indicators_y)
+def rect(cx, cy, hw, hh, fc='white', ec='black', lw=1.2, z=3):
+    ax.add_patch(mpatches.FancyBboxPatch(
+        (cx - hw, cy - hh), hw * 2, hh * 2,
+        boxstyle='square,pad=0', fc=fc, ec=ec, lw=lw, zorder=z,
+        transform=ax.transAxes, clip_on=False))
 
-# 경로 설정
-structural_edges = [('X', 'M'), ('M', 'Y'), ('X', 'Y'), ('Gender', 'M'), ('Gender', 'Y')]
-G_sem.add_edges_from(structural_edges)
+def label(x, y, s, fs=10, fw='normal', color='black', z=5,
+          ha='center', va='center'):
+    ax.text(x, y, s, ha=ha, va=va, fontsize=fs, fontweight=fw,
+            color=color, zorder=z, transform=ax.transAxes, clip_on=False)
 
-for i in indicators_x: G_sem.add_edge('X', i)
-for i in indicators_m: G_sem.add_edge('M', i)
-for i in indicators_y: G_sem.add_edge('Y', i)
+def sarrow(x0, y0, x1, y1, rad=0.0, color='#1a3a6e', lw=2.2):
+    """Structural arrow with solid arrowhead."""
+    ax.annotate('', xy=(x1, y1), xytext=(x0, y0),
+                xycoords='axes fraction', textcoords='axes fraction',
+                zorder=4,
+                arrowprops=dict(arrowstyle='-|>', color=color,
+                                lw=lw, mutation_scale=22,
+                                connectionstyle=f'arc3,rad={rad}'))
 
-# 좌표 설정 (v3: 상단 배치 및 겹침 방지)
-pos = {}
-pos['X'] = (0, 10)
-pos['M'] = (15, 15)
-pos['Y'] = (30, 10)
-pos['Gender'] = (25, 20)
+def marrow(x0, y0, x1, y1):
+    """Measurement arrow (dashed, grey)."""
+    ax.annotate('', xy=(x1, y1), xytext=(x0, y0),
+                xycoords='axes fraction', textcoords='axes fraction',
+                zorder=3,
+                arrowprops=dict(arrowstyle='-|>', color='#999999',
+                                lw=0.8, mutation_scale=9,
+                                linestyle=(0, (5, 3)),
+                                connectionstyle='arc3,rad=0.0',
+                                alpha=0.65))
 
-for idx, i in enumerate(indicators_x): pos[i] = (-6, 7 + idx * 2)
-for idx, i in enumerate(indicators_m):
-    pos[i] = (5 + (idx % 3) * 2.5, 20 + (idx // 3) * 1.5) 
-for idx, i in enumerate(indicators_y): pos[i] = (36, 5 + idx * 2)
+def clabel(x, y, txt, color='#1a3a6e', fs=14, dx=0.0, dy=0.022):
+    ax.text(x + dx, y + dy, txt, ha='center', va='bottom',
+            fontsize=fs, fontstyle='italic', fontweight='bold',
+            color=color, zorder=6, transform=ax.transAxes, clip_on=False)
 
-plt.figure(figsize=(20, 14))
+# ── Latent circles ────────────────────────────────────────────────────────────
+for (cx, cy), main, sub in [
+        (PX, '쓰기인식', '(Awareness)'),
+        (PM, '쓰기반응', '(Reaction)'),
+        (PY, '수행태도', '(Performance)')]:
+    circle(cx, cy, R)
+    label(cx, cy + 0.018, main, fs=15, fw='bold')
+    label(cx, cy - 0.022, sub,  fs=15, color='#333333')
 
-# 노드 그리기
-nx.draw_networkx_nodes(G_sem, pos, nodelist=latent_nodes, node_color='skyblue', node_size=4500)
-nx.draw_networkx_nodes(G_sem, pos, nodelist=control_node, node_color='lightgrey', node_size=3500, node_shape='s')
-nx.draw_networkx_nodes(G_sem, pos, nodelist=indicators_x + indicators_m + indicators_y, 
-                       node_color='white', edgecolors='black', node_size=1000, node_shape='s')
+# ── Gender box ────────────────────────────────────────────────────────────────
+rect(PG[0], PG[1], 0.058, 0.034, fc='#e2e2e2', ec='#555555', lw=1.8)
+label(PG[0], PG[1] + 0.013, '성별',      fs=14, fw='bold')
+label(PG[0], PG[1] - 0.015, '(Gender)',  fs=11, color='#444444')
 
-# 경로 그리기
-nx.draw_networkx_edges(G_sem, pos, edgelist=structural_edges, width=2.5, arrowsize=25, edge_color='darkblue', connectionstyle='arc3,rad=0.05')
-measurement_edges = [e for e in G_sem.edges() if e not in structural_edges]
-nx.draw_networkx_edges(G_sem, pos, edgelist=measurement_edges, width=1.0, arrowsize=15, edge_color='grey', style='dashed', alpha=0.4)
+# ── Observed boxes ────────────────────────────────────────────────────────────
+for i, (cx, cy) in enumerate(IX):
+    rect(cx, cy, WB, HB); label(cx, cy, f'y{i+1}', fs=15)
+for i, (cx, cy) in enumerate(IM):
+    rect(cx, cy, WB, HB); label(cx, cy, f'y{i+5}', fs=15)
+for i, (cx, cy) in enumerate(IY):
+    rect(cx, cy, WB, HB); label(cx, cy, f'y{i+16}', fs=15)
 
-# 한글 라벨링
-labels = {'X': '쓰기인식\n(Awareness)', 'M': '쓰기반응\n(Reaction)', 'Y': '수행태도\n(Performance)', 'Gender': '성별\n(Gender)'}
-nx.draw_networkx_labels(G_sem, pos, labels=labels, font_size=11, font_weight='bold')
-nx.draw_networkx_labels(G_sem, pos, labels={n:n for n in indicators_x+indicators_m+indicators_y}, font_size=9)
+# ── Structural paths ──────────────────────────────────────────────────────────
+# β₁: X → M  (diagonal up-right)
+A = (PX[0] + R * 0.55, PX[1] + R * 0.84)
+B = (PM[0] - R * 0.55, PM[1] - R * 0.84)
+sarrow(*A, *B)
+clabel((A[0]+B[0])/2 - 0.04, (A[1]+B[1])/2, 'β₁', dy=0.018)
 
-# 경로 계수 표시
-edge_labels = {('X', 'M'): 'β1', ('M', 'Y'): 'β2', ('X', 'Y'): 'γ1', ('Gender', 'M'): 'γM', ('Gender', 'Y'): 'γY'}
-nx.draw_networkx_edge_labels(G_sem, pos, edge_labels=edge_labels, font_size=14, label_pos=0.3)
+# β₂: M → Y  (diagonal down-right)
+A = (PM[0] + R * 0.55, PM[1] - R * 0.84)
+B = (PY[0] - R * 0.55, PY[1] + R * 0.84)
+sarrow(*A, *B)
+clabel((A[0]+B[0])/2 + 0.04, (A[1]+B[1])/2, 'β₂', dy=0.018)
 
-plt.title("한국어 쓰기 태도 구조방정식 모델 (SEM Path Diagram)", fontsize=20)
-plt.axis('off')
-plt.savefig('sem_path_diagram_korean.png', dpi=300, bbox_inches='tight')
-plt.show()
+# γ₁: X → Y  (direct, straight line at circle mid-height)
+sarrow(PX[0] + R, PX[1],
+       PY[0] - R, PY[1],
+       rad=0.0)
+clabel(0.50, PX[1], 'γ₁ (직접)', dy=-0.052, color='#1a3a6e', fs=13)
+
+# γ_M: Gender → M
+sarrow(PG[0] - 0.006, PG[1] - 0.034, PM[0], PM[1] + R,
+       rad=0.0, color='#555555', lw=1.8)
+clabel(PG[0] - 0.055, (PG[1] + PM[1] + R) / 2, 'γ_M',
+       color='#444444', fs=11, dy=0.0)
+
+# γ_Y: Gender → Y  (diagonal right-down from Gender)
+sarrow(PG[0] + 0.028, PG[1] - 0.020,
+       PY[0] + R * 0.15, PY[1] + R * 0.98,
+       rad=-0.08, color='#555555', lw=1.8)
+clabel((PG[0] + PY[0]) / 2 + 0.04, (PG[1] + PY[1]) / 2, 'γ_Y',
+       color='#444444', fs=11, dy=0.0)
+
+# ── Measurement paths ─────────────────────────────────────────────────────────
+for (cx, cy) in IX:
+    marrow(PX[0] - R, PX[1], cx + WB, cy)
+for (cx, cy) in IM:
+    marrow(PM[0], PM[1] - R, cx, cy + HB)
+for (cx, cy) in IY:
+    marrow(PY[0] + R, PY[1], cx - WB, cy)
+
+# ── Legend & title ────────────────────────────────────────────────────────────
+ax.legend(handles=[
+    mpatches.Patch(fc='#b8d4ea', ec='#1a3a6e', lw=1.5, label='잠재변수 (원)'),
+    mpatches.Patch(fc='white',   ec='black',   lw=1.2, label='관측문항 (사각형)'),
+    mpatches.Patch(fc='#e2e2e2', ec='#555555', lw=1.4, label='성별 공변량'),
+], loc='lower right', fontsize=12, framealpha=0.9, edgecolor='#cccccc')
+
+ax.set_title('한국어 쓰기 태도 PCM-SEM 경로 모형\n'
+             '원: 잠재변수, 사각형: 관측문항(y1–y21), 회색 사각형: 성별 공변량',
+             fontsize=16, fontweight='bold', pad=14)
+
+# ── Save ──────────────────────────────────────────────────────────────────────
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                   'sem_path_diagram_korean.png')
+with warnings.catch_warnings():
+    warnings.simplefilter('ignore')
+    plt.savefig(OUT, dpi=300, bbox_inches='tight', facecolor='white')
+print(f'Saved: {OUT}')

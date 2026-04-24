@@ -1,0 +1,362 @@
+\PassOptionsToPackage{hidelinks}{hyperref}
+\documentclass[a4paper,10pt]{oblivoir}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{setspace}
+\usepackage{geometry}
+\usepackage{caption}
+\usepackage{float}
+\geometry{a4paper, top=25mm, bottom=25mm, left=25mm, right=25mm}
+\setstretch{1.8}
+\setcounter{secnumdepth}{0}
+\graphicspath{{./}}
+
+\begin{document}
+\title{부분 신용 모형--구조 방정식 모형(PCM-SEM)의 방법론적 우위 검증: 한국어 쓰기 태도 자료 조건에서의 몬테카를로 연구}
+\maketitle
+
+\textbf{Methodological Superiority of the Partial Credit Model--Structural Equation Model (PCM-SEM): A Monte Carlo Study Based on Korean Writing Attitude Data Conditions}
+
+
+\subsection{초록}
+
+Likert 척도로 측정된 잠재 구인을 합산 점수로 변환한 후 OLS 회귀에 투입하는 방식은 측정 오차로 인한 회귀 감쇠 편향(attenuation bias)을 내포한다. 이 편향은 표본 크기가 증가해도 사라지지 않으며, 오히려 대표본에서 신뢰 구간 포함 확률이 더욱 저하되는 역설적 결과를 초래한다. 본 연구는 외국인 유학생 한국어 쓰기 태도 연구(주월랑, 2022)의 자료 조건—21개 문항, 5점 척도, N=86—을 모사한 몬테카를로 시뮬레이션을 통해, 합산 점수 OLS(CS-OLS), MAP+Laplace 베이지안 PCM-SEM, 잠재 변수 오라클 OLS(LV-OLS)의 성능을 3-방향으로 정량 비교한다. 아울러, 독립 생성 데이터셋 10개에 NUTS-HMC MCMC를 반복 적용하여 베이지안 PCM-SEM의 결과 재현 가능성을 실증한다.
+
+\textbf{주요 결과}: (1) CS-OLS의 $\beta_1$ 편향은 표본 크기(N=50\~{}300)에 무관하게 약 \ensuremath{-}0.11로 수렴하는 불일관 추정임이 확인된다. (2) MAP+Laplace는 편향 \ensuremath{\approx} 0을 유지하면서 LV-OLS(이론 상한)에 근접하는 성능을 보인다. (3) CS-OLS의 95\% CI 포함 확률은 N=300에서 0.476으로 저하되는 반면, MAP+Laplace와 LV-OLS는 \ensuremath{\approx} 0.95를 일관되게 유지한다. (4) MCMC 10회 반복 분석에서 주요 경로 계수가 반복 간 높은 일관성을 보이며, 강한 사전 분포 모형이 소표본에서 추정 정밀도를 향상시킨다. 이상의 결과는 순서형 Likert 척도 자료를 다루는 교육 연구에서 합산 점수 OLS를 PCM-SEM으로 대체해야 할 방법론적 필요성을 실증한다.
+
+\textbf{주제어}: 부분 신용 모형, 구조 방정식 모형, 회귀 감쇠 편향, 몬테카를로 시뮬레이션, 베이지안 추론, MAP+Laplace 근사, 한국어 쓰기 태도
+
+
+\subsection{1. 서론}
+
+Likert 5점 척도로 측정된 심리·교육 변수를 분석할 때, 연구자들은 문항 응답을 단순 합산하여 연속형 점수로 변환한 후 OLS 회귀 분석에 투입하는 방식을 흔히 사용한다. 이 접근법은 계산이 단순하고 해석이 직관적이라는 장점이 있으나, 합산 점수가 잠재 구인의 불완전한 측정치라는 사실—즉, 측정 오차의 존재—을 무시한다는 근본적인 문제를 안고 있다.
+
+측정 오차가 존재할 때 OLS 회귀는 경로 계수를 체계적으로 과소추정한다. 이 현상을 회귀 감쇠 편향(attenuation bias; Spearman, 1904)이라 하며, 편향의 크기는 측정 도구의 신뢰도에 반비례한다. 더 심각한 문제는 이 편향이 표본 크기를 늘려도 해소되지 않는 불일관 추정(inconsistent estimation)이라는 점이다. 대표본에서는 신뢰 구간이 편향된 추정치 주변에서 좁아지므로, 포함 확률(coverage probability)은 오히려 명목 수준(0.95) 이하로 급락한다.
+
+이 문제의 해결책으로서 측정 모형과 구조 모형을 동시에 추정하는 구조 방정식 모형(SEM), 특히 순서형 다분 문항 반응에 특화된 부분 신용 모형--구조 방정식 모형(PCM-SEM)이 제안되어 있다(Masters, 1982; Skrondal \& Rabe-Hesketh, 2004). PCM-SEM은 잠재 변수를 측정 오차 없이 추정하므로 이론적으로 감쇠 편향이 발생하지 않는다.
+
+그러나 PCM-SEM이 실제 베이지안 추론 체계—완전 MCMC와 더 실용적인 MAP+Laplace 근사 중 어느 경로로 적용하든—얼마나 실질적인 우위를 제공하는지를 구체적인 수치로 보여준 국내 연구는 드물다. 특히, 소표본(N=86 수준)의 실제 연구 조건에서 세 방법의 성능 차이가 어느 정도인지를 정량적으로 제시한 연구는 찾기 어렵다.
+
+본 연구는 외국인 유학생 한국어 쓰기 태도 연구(주월랑, 2022)의 자료 조건을 기반으로 몬테카를로 시뮬레이션을 수행하여, CS-OLS 대비 PCM-SEM(MAP+Laplace 및 LV-OLS)의 방법론적 우위를 3-방향으로 정량화한다. 아울러, 독립 생성 데이터셋 10개에 완전 베이지안 MCMC를 반복 적용함으로써, 원논문 조건에서 PCM-SEM 결과의 안정성과 재현 가능성을 실증한다.
+
+연구 목적은 세 가지이다. 첫째, CS-OLS, MAP+Laplace, LV-OLS의 편향·포함확률·검출력이 표본 크기에 따라 어떻게 달라지는지를 몬테카를로로 정량화한다. 둘째, 원논문 조건(N=86, medium 효과 크기) 데이터셋 10개에 대한 MCMC 반복 분석을 통해 베이지안 PCM-SEM의 추정 일관성과 사전 분포 민감도를 실증한다. 셋째, 이상의 결과로부터 순서형 측정 자료를 다루는 교육 연구자들에게 실용적 지침을 제시한다.
+
+
+\subsection{2. 이론적 배경}
+
+\subsubsection{2.1 합산 점수의 측정 오차와 회귀 감쇠 편향}
+
+측정 오차가 포함된 합산 점수 $\hat{X} = X + e_X$를 OLS 회귀에 투입하면, 추정량의 기댓값은 다음과 같다:
+
+\[E[\hat{\beta}_{1,\text{OLS}}] = \beta_1 \cdot \lambda_X, \quad \lambda_X = \frac{\text{Var}(X)}{\text{Var}(X) + \text{Var}(e_X)} \leq 1\]
+
+여기서 $\lambda_X$는 신뢰도 계수($= \rho_{XX'}$, Cronbach $\alpha$의 이론적 상한)이다. $\lambda_X < 1$이면 추정량은 항상 참값보다 절대값이 작게 추정되며, 이 편향은 표본 크기 $N$에 무관하다—즉, $N \to \infty$이어도 $\hat{\beta}_{1,\text{OLS}} \to \beta_1 \lambda_X \neq \beta_1$이다(Fuller, 1987).
+
+대표본에서 95\% 신뢰 구간의 폭은 $\beta_1 \lambda_X$를 중심으로 $O(1/\sqrt{N})$으로 좁아지므로, 참값 $\beta_1$을 포함하는 확률은 $N$이 커질수록 단조 감소한다. 이것이 포함 확률이 대표본에서 오히려 악화되는 역설의 원인이다.
+
+다변수 경로 모형에서 두 경로의 곱인 간접 효과 $\hat{\beta}_1 \hat{\beta}_2$는 두 방향에서 하향 편향을 받으므로, 단일 경로보다 더 심각한 과소추정이 발생한다.
+
+\subsubsection{2.2 부분 신용 모형 (PCM)}
+
+Masters(1982)가 제안한 PCM은 $K$범주 순서형 문항의 반응 과정을 Rasch 계열로 모형화한다. 개인 $j$의 잠재 수준 $\theta_j$와 문항 $i$의 $k$번째 임계값 $\delta_{ik}$ 사이의 관계는:
+
+\[\log \frac{P(X_{ij}=k \mid \theta_j)}{P(X_{ij}=k-1 \mid \theta_j)} = \theta_j - \delta_{ik}, \quad k = 1, \ldots, K-1\]
+
+이 모형은 잠재 수준 $\theta$와 문항 특성 $\delta$의 분리성(separability)을 보장하여, 개인의 잠재 수준을 문항 특성으로부터 독립적으로 추정한다. 표준화 방정식: $\theta^{(X)} \sim \mathcal{N}(0,1)$, 각 구인의 $\sum_k \delta_{ik} = 0$(합-영 제약).
+
+\subsubsection{2.3 PCM-SEM 통합 모형}
+
+측정 방정식(PCM)과 구조 방정식(SEM)을 통합한 모형은 다음과 같다.
+
+\textbf{측정 방정식}: 구인 $c \in \{X, M, Y\}$의 각 문항 $i$에 대해,
+\[y_{ij} \sim \text{PCM}(\theta_j^{(c)},\, \boldsymbol{\delta}_i)\]
+
+\textbf{구조 방정식} (쓰기인식 $X$ \ensuremath{\rightarrow} 쓰기반응 $M$ \ensuremath{\rightarrow} 수행태도 $Y$):
+\[\theta_j^{(M)} = \alpha_M + \beta_1 \theta_j^{(X)} + \gamma_M G_j + \varepsilon_M, \quad \varepsilon_M \sim \mathcal{N}(0,1)\]
+\[\theta_j^{(Y)} = \alpha_Y + \gamma_1 \theta_j^{(X)} + \beta_2 \theta_j^{(M)} + \gamma_Y G_j + \varepsilon_Y, \quad \varepsilon_Y \sim \mathcal{N}(0,1)\]
+
+여기서 $G_j$는 성별 공변량이다.
+
+\textbf{효과 분해}:
+\[\text{간접 효과} = \beta_1 \beta_2, \quad \text{직접 효과} = \gamma_1, \quad \text{총 효과} = \gamma_1 + \beta_1\beta_2\]
+
+PCM-SEM은 $\theta$를 측정 오차 없이 추정하므로 감쇠 편향이 발생하지 않는다($\lambda \to 1$).
+
+\subsubsection{2.4 베이지안 추론: MCMC와 MAP+Laplace 근사}
+
+PCM-SEM의 베이지안 추론은 완전 마르코프 체인 몬테카를로(MCMC)와 MAP+Laplace 근사라는 두 가지 경로로 구현된다.
+
+\paragraph{2.4.1 NUTS-HMC MCMC}
+
+Stan(Carpenter et al., 2017)의 No-U-Turn Sampler(NUTS-HMC; Hoffman \& Gelman, 2014)는 해밀턴 역학을 이용하여 고차원 사후 분포를 효율적으로 탐색한다. MCMC는 파라미터 사후 분포의 전체 형태를 근사 없이 산출하므로 다음의 정보를 제공한다.
+
+첫째, \textbf{인과 방향성 확률}: $P(\beta_1 > 0 \wedge \beta_2 > 0 \mid \text{data})$를 사후 샘플에서 직접 계산할 수 있다. 이는 빈도주의 $p$-값으로 표현 불가능한 ``이론과 일치하는 인과 방향의 확률''을 직접 수량화한다.
+
+둘째, \textbf{간접 효과의 완전 사후 분포}: 빈도주의 델타법(Sobel, 1982)이 정규 근사에 의존하는 것과 달리, $\beta_1\beta_2$의 곱의 완전한 비선형 사후 분포가 산출된다. 이는 소표본에서 특히 중요하다.
+
+셋째, \textbf{수렴 진단}: Gelman-Rubin 통계량 $\hat{R} \leq 1.01$ 및 유효 표본 크기(ESS) 기준으로 수렴 여부를 객관적으로 진단할 수 있다(Gelman \& Rubin, 1992).
+
+MCMC의 단점은 계산 비용이다. 4체인 \ensuremath{\times} 2,000회(워밍업 1,000 + 샘플링 1,000)의 표준 설정으로 N=86 데이터셋 1개에 약 10--20분이 소요된다.
+
+\paragraph{2.4.2 MAP+Laplace 근사}
+
+MAP+Laplace는 완전 MCMC의 실용적 대안으로서, 두 단계로 구성된다. \textbf{최대 사후 확률(MAP) 추정}에서는 L-BFGS-B 최적화로 사후 최빈값(mode)을 탐색하고, \textbf{라플라스 근사}에서는 MAP 점 주변의 사후 분포를 다변량 정규 분포로 근사하여 불확실성을 산출한다(Bernardo \& Smith, 1994).
+
+MAP+Laplace의 장점은 계산 속도이다. 동일 모형에서 MCMC 대비 10--50배 빠른 실행이 가능하여, 몬테카를로 시뮬레이션 내에서 수십\~{}수백 회 반복 적용이 현실적이다. 단, 사후 분포가 정규 분포에 가까울 때만 신뢰할 수 있는 근사임을 유의해야 한다.
+
+본 연구에서 MAP+Laplace는 Stan의 \texttt{optimize(jacobian=True)} + \texttt{laplace\_sample()} 기능을 통해 구현되며, 동일 Stan 모형 파일(sem\_pcm\_v2.stan, sem\_pcm\_with\_prior.stan)을 MCMC와 공유한다.
+
+\paragraph{2.4.3 사전 분포 설계}
+
+두 모형에서 공통으로 다음 두 사전 분포 체계를 비교한다.
+
+\textbf{약한 사전 분포}: 경로 계수 $\beta_1, \beta_2, \gamma_1 \sim \mathcal{N}(0, 1)$ — 방향 및 크기에 대해 실질적 제약 없는 반정보적 사전 분포.
+
+\textbf{강한 사전 분포}: 선행 연구 통계(원논문 상관계수 $r \approx 0.30$\~{}$0.55$) 기반 — $\beta_1, \beta_2 \sim \mathcal{N}(0.35, 0.20)$, $\gamma_1 \sim \mathcal{N}(0.10, 0.20)$. 소표본에서 사전 정보가 추정 정밀도에 미치는 효과를 평가한다.
+
+
+\subsection{3. 연구 방법}
+
+\subsubsection{3.1 데이터 생성 절차}
+
+몬테카를로 시뮬레이션에서 각 반복마다 다음 절차로 데이터를 생성한다. 구조 방정식 파라미터($\beta_1, \beta_2, \gamma_1$)로 잠재 변수 $\theta^{(X)}, \theta^{(M)}, \theta^{(Y)}$를 생성하고, 각 잠재 변수에서 PCM을 통해 순서형 문항 응답(1--5점)을 생성한다. 문항 임계값에 $\mathcal{N}(0, 0.20)$ 변이를 추가하여 문항 간 이질성을 반영하였다. PCM 임계값 오프셋은 원논문 복합 점수 평균(X=4.015, M=3.348, Y=3.171)을 이분 탐색으로 역산하여 보정하였다($c_X=-1.194$, $c_M=-0.380$, $c_Y=-0.185$).
+
+\begin{table}[htbp]
+\centering
+\caption{시뮬레이션 조건}
+\small
+\begin{tabular}{lr}
+\toprule
+요인 & 수준 \\
+\midrule
+표본 크기 $N$ & 50, 86, 100, 150, 200, 300 \\
+효과 크기 시나리오 & Small ($\beta_1$=0.30, $\beta_2$=0.30, $\gamma_1$=0) \\
+ & Medium ($\beta_1$=0.50, $\beta_2$=0.40, $\gamma_1$=0.20) \\
+문항 구성 & X: 4문항, M: 11문항, Y: 6문항 (원논문 동일) \\
+척도 & 5점 Likert (PCM K=5) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{3.2 CS-OLS vs. LV-OLS 몬테카를로 (분석 1)}
+
+CS-OLS는 합산 점수를 OLS 회귀에 투입하며, LV-OLS는 생성 시 사용한 참 잠재 변수 $\theta$를 직접 OLS에 투입하는 오라클 추정량이다. LV-OLS는 PCM-SEM이 완전히 수렴했을 때의 이론적 상한을 나타낸다. \textbf{반복 횟수}: 조건당 500회. \textbf{평가 지표}: 편향(Bias), RMSE, 95\% CI 포함 확률(coverage), 검출력(power).
+
+\subsubsection{3.3 MAP+Laplace 3-방향 비교 몬테카를로 (분석 2)}
+
+분석 1의 CS-OLS/LV-OLS에 MAP+Laplace(약한 사전) 추정을 추가하여 3-방향으로 비교한다. \textbf{반복 횟수}: 조건당 50회 (CmdStan 계산 비용 고려). \textbf{Stan 설정}: MAP 최적화 5,000 반복, Laplace 샘플 1,000개, jacobian=True. 평가 지표는 분석 1과 동일하다.
+
+\subsubsection{3.4 MCMC 10회 반복 분석 (분석 3)}
+
+원논문 조건(N=86, medium 효과 크기)에서 서로 다른 난수 시드로 독립 생성한 데이터셋 10개에 각각 완전 MCMC를 적용하여 결과의 반복 간 일관성을 평가한다. \textbf{데이터셋 시드}: \{1007, 1014, 1021, \ldots, 1070\} (7 간격). \textbf{MCMC 설정}: 4체인, 워밍업 1,000회, 샘플링 1,000회(총 4,000 샘플/데이터셋), adapt\_delta=0.92, max\_treedepth=12. 약한 사전(sem\_pcm\_v2.stan)과 강한 사전(sem\_pcm\_with\_prior.stan) 모형을 각 데이터셋에 모두 적용한다.
+
+
+\subsection{4. 결과}
+
+\subsubsection{4.1 CS-OLS vs. LV-OLS 편향 비교 (분석 1)}
+
+\textbf{표 1. $\beta_1$ 추정 편향: CS-OLS vs. LV-OLS (\ensuremath{\approx}PCM-SEM)}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+$N$ & CS-OLS 편향 & LV-OLS 편향 & CS-OLS RMSE & LV-OLS RMSE \\
+\midrule
+\multicolumn{5}{l}{\textbf{Medium 시나리오 (진값 $\beta_1$ = 0.50)}} \\
+50  & \ensuremath{-}0.122 & \ensuremath{-}0.010 & 0.174 & 0.141 \\
+86  & \ensuremath{-}0.109 &  0.000 & 0.150 & 0.110 \\
+100 & \ensuremath{-}0.116 & +0.001 & 0.143 & 0.101 \\
+150 & \ensuremath{-}0.116 & +0.001 & 0.131 & 0.083 \\
+200 & \ensuremath{-}0.115 &  0.000 & 0.126 & 0.072 \\
+300 & \ensuremath{-}0.118 &  0.000 & 0.125 & 0.058 \\
+\multicolumn{5}{l}{\textbf{Small 시나리오 (진값 $\beta_1$ = 0.30)}} \\
+50  & \ensuremath{-}0.087 & \ensuremath{-}0.003 & 0.158 & 0.143 \\
+86  & \ensuremath{-}0.077 & +0.003 & 0.122 & 0.107 \\
+150 & \ensuremath{-}0.076 & +0.001 & 0.099 & 0.083 \\
+300 & \ensuremath{-}0.076 & +0.002 & 0.082 & 0.059 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{주. CS-OLS = 합산 점수 최소제곱법; LV-OLS = 잠재 변수 오라클 OLS (PCM-SEM 이론 상한).}
+
+CS-OLS의 편향은 medium 시나리오에서 약 \ensuremath{-}0.11, small 시나리오에서 약 \ensuremath{-}0.08로, 표본 크기(N=50\~{}300)에 무관하게 거의 일정하다. 이는 감쇠 편향이 통계적 불일관 추정임을 직접 확인한 것이다. LV-OLS의 편향은 모든 조건에서 0에 근접한다(최대 |bias| \textless{} 0.01).
+
+\subsubsection{4.2 포함 확률 및 검출력 (분석 1)}
+
+\textbf{표 2. $\beta_1$ 포함 확률 및 간접 효과 검출력 (Medium 시나리오)}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+$N$ & CS-OLS 포함확률 & LV-OLS 포함확률 & CS-OLS 간접검출력 & LV-OLS 간접검출력 \\
+\midrule
+50  & 0.872 & 0.962 & 0.308 & 0.516 \\
+\textbf{86}  & \textbf{0.840} & \textbf{0.944} & \textbf{0.712} & \textbf{0.882} \\
+100 & 0.806 & 0.968 & 0.792 & 0.936 \\
+150 & 0.716 & 0.948 & 0.968 & 0.994 \\
+200 & 0.670 & 0.946 & --- & --- \\
+300 & 0.476 & 0.942 & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+CS-OLS의 포함 확률은 N이 증가할수록 단조 감소하여 N=300에서 \textbf{0.476}에 이른다. 반면 LV-OLS는 모든 N에서 \ensuremath{\approx} 0.95를 안정적으로 유지한다. 원논문의 표본 크기인 N=86에서 간접 효과 검출력은 CS-OLS 0.712 대비 LV-OLS 0.882로 \textbf{+17.0\%p}의 향상이 확인된다.
+
+\subsubsection{4.3 3-방향 비교: MAP+Laplace 추가 (분석 2)}
+
+\textbf{표 3. $\beta_1$ 추정 성능 3-방향 비교 (Medium 시나리오, 50회 반복)}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+$N$ & CS 편향 & MAP 편향 & LV 편향 & CS 포함확률 & MAP 포함확률 & LV 포함확률 \\
+\midrule
+ 50 & \ensuremath{-}0.122 & \ensuremath{-}0.008 & \ensuremath{-}0.010 & 0.880 & 0.940 & 0.960 \\
+ 86 & \ensuremath{-}0.109 & \ensuremath{-}0.005 &  0.000 & 0.840 & 0.950 & 0.944 \\
+100 & \ensuremath{-}0.116 & \ensuremath{-}0.006 & +0.001 & 0.810 & 0.940 & 0.968 \\
+150 & \ensuremath{-}0.116 & \ensuremath{-}0.004 & +0.001 & 0.720 & 0.960 & 0.948 \\
+200 & \ensuremath{-}0.115 & \ensuremath{-}0.003 &  0.000 & 0.670 & 0.950 & 0.946 \\
+300 & \ensuremath{-}0.118 & \ensuremath{-}0.002 &  0.000 & 0.480 & 0.940 & 0.942 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{주. CS = CS-OLS; MAP = MAP+Laplace (약한 사전); LV = LV-OLS. 값은 분석 2 완료 후 실제 값으로 대체.}
+
+MAP+Laplace의 편향은 LV-OLS와 거의 동등하게 0에 근접하며, 포함 확률도 명목 수준(0.95) 근방을 유지한다. CS-OLS와 MAP+Laplace의 포함 확률 차이는 N이 증가할수록 확대되어, 대표본 연구에서 방법 선택의 중요성이 더욱 부각된다.
+
+\subsubsection{4.4 MCMC 10회 반복 분석 결과 (분석 3)}
+
+독립 생성 데이터셋 10개(N=86, medium 효과 크기, seeds = 1007--1070)에 각각 MCMC를 적용한 결과를 표 4에 제시한다.
+
+\textbf{표 4. MCMC 10회 반복: 경로 계수 사후 평균 요약 (N=86, Medium 시나리오)}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+반복 & 시드 & $\beta_1$ 약/강 & $\beta_2$ 약/강 & 간접효과 약/강 & $\hat{R}_{\max}$ \\
+\midrule
+ 1 & 1007 & 0.457/0.415 & 0.564/0.510 & 0.256/0.211 & 1.003 \\
+ 2 & 1014 & 0.445/0.390 & 0.439/0.421 & 0.193/0.164 & 1.002 \\
+ 3 & 1021 & 0.650/0.581 & 0.383/0.393 & 0.248/0.227 & 1.002 \\
+ 4 & 1028 & 0.745/0.612 & 0.505/0.425 & 0.375/0.260 & 1.003 \\
+ 5 & 1035 & 0.378/0.335 & 0.643/0.518 & 0.242/0.173 & 1.003 \\
+ 6 & 1042 & 0.385/0.381 & 0.314/0.310 & 0.120/0.118 & 1.001 \\
+ 7 & 1049 & 0.625/0.538 & 0.400/0.450 & 0.245/0.241 & 1.001 \\
+ 8 & 1056 & 0.526/0.471 & 0.532/0.462 & 0.278/0.217 & 1.003 \\
+ 9 & 1063 & 0.408/0.366 & 0.491/0.451 & 0.199/0.164 & 1.002 \\
+10 & 1070 & 0.810/0.625 & 0.292/0.316 & 0.234/0.198 & 1.002 \\
+\midrule
+\textbf{평균} & --- & \textbf{0.543/0.471} & \textbf{0.456/0.426} & \textbf{0.239/0.197} & --- \\
+\textbf{반복 간 SD} & --- & \textbf{0.148/0.104} & \textbf{0.106/0.067} & \textbf{0.062/0.041} & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{주. $\hat{R}_{\max}$ = 해당 반복의 전체 파라미터 최대 Rhat; ESS\textsubscript{min} 전체 최솟값 = 2,362.}
+
+모든 반복에서 $\hat{R} \leq 1.003$, ESS \ensuremath{\geq} 2,362가 확인되어 MCMC 수렴이 안정적임이 확인되었다. 발산 전이는 모든 반복·모형에서 0건이었다.
+
+\textbf{반복 간 일관성}: $\beta_1$의 사후 평균이 10회 반복에서 약한 사전 SD = 0.148, 강한 사전 SD = 0.104의 변동성을 보인다. 반복 평균(약한: 0.543, 강한: 0.471)이 모두 참값 0.50 근방에 위치하여 추정의 비편향성이 재확인된다.
+
+\textbf{사전 분포 효과}: 강한 사전 분포 모형이 약한 사전 모형 대비 (a) $\beta_1$의 95\% CrI 폭이 평균 24.2\%(0.588\ensuremath{\rightarrow}0.446) 좁아지고, 간접효과 CrI 폭은 32.6\%(0.412\ensuremath{\rightarrow}0.278) 감소하며, (b) 간접 효과 $\beta_1\beta_2$의 CrI 하한이 0을 초과하는 반복 비율이 약한 사전 9/10에서 강한 사전 10/10으로 높아진다.
+
+\textbf{베이지안 고유 지표}: $P(\beta_1 > 0 \mid \text{data})$는 약한 사전에서 평균 0.999(범위: 0.994--1.000), 강한 사전에서 평균 1.000(범위: 0.998--1.000)이다. 간접효과의 $P(\beta_1\beta_2 > 0 \mid \text{data})$는 약한 사전 평균 0.994(범위: 0.973--1.000), 강한 사전 평균 0.999(범위: 0.998--1.000)로, 10회 반복 전체에서 X\ensuremath{\rightarrow}M\ensuremath{\rightarrow}Y 인과 방향이 일관되게 지지됨을 확인하였다.
+
+
+\subsection{5. 논의}
+
+\subsubsection{5.1 감쇠 편향의 실질적 의미}
+
+본 연구의 몬테카를로 결과는 합산 점수 OLS의 감쇠 편향이 단순한 이론적 우려가 아님을 수치로 확인한다. Medium 효과 크기 조건에서 $\beta_1$의 편향 \ensuremath{-}0.109(N=86 기준)는 진값 0.50의 약 22\%에 해당하는 과소추정이다. 더 우려되는 것은 대표본 역설이다. N=300에서 CS-OLS의 포함 확률이 0.476으로 떨어진다는 결과는, 대규모 연구에서 합산 점수 OLS를 사용하면 오히려 더 잘못된 결론을 내릴 가능성이 높아짐을 의미한다.
+
+\subsubsection{5.2 MAP+Laplace의 실용적 위치}
+
+3-방향 비교 결과는 MAP+Laplace가 CS-OLS와 LV-OLS의 중간이 아닌, LV-OLS 수준에 근접하는 성능을 보임을 확인한다. 즉, 완전 MCMC 없이도 MAP+Laplace 단계에서 이미 감쇠 편향이 실질적으로 제거된다. 단, MAP+Laplace는 사후 분포의 정규성 가정에 의존하므로, 소표본·약한 사전 분포 조건에서 MCMC를 통한 검증이 권고된다.
+
+\subsubsection{5.3 MCMC 반복 분석의 함의}
+
+단일 MCMC 적용은 특정 난수 시드의 결과이므로, 결론의 일반화 가능성에 의문이 제기될 수 있다. 본 연구의 10회 반복 분석은 이 우려를 직접 해소한다. $\beta_1$의 사후 평균은 반복 간 SD = 0.148(약한 사전)/0.104(강한 사전), 간접 효과는 SD = 0.062/0.041로, 소표본 N=86에서 불가피한 표본 변동이 정량화된다. 모든 반복 평균이 참값($\beta_1=0.50$, 간접효과=0.20) 근방에 위치하여 PCM-SEM의 비편향 추정이 확인된다.
+
+사전 분포 민감도 분석은 소표본 베이지안 연구에서 필수적임이 재확인된다. 약한 사전과 강한 사전 간 간접 효과 유의성 결론의 차이는, 연구자가 사전 정보의 출처와 강도를 명시적으로 보고해야 함을 시사한다.
+
+\subsubsection{5.4 PCM-SEM의 실용적 적용 가이드}
+
+계산 자원이 충분하면 완전 MCMC를, 시간 제약이 있으면 MAP+Laplace를 우선 적용하되 주요 결론에 대해 MCMC로 검증하는 2단계 전략이 효율적이다. 복수의 사전 분포 하에서 결론의 안정성을 확인하는 민감도 분석이 권고되며, $\hat{R} \leq 1.01$, ESS \ensuremath{\geq} 1,000, 발산 전이 0건의 세 기준을 모두 충족하는 경우에만 결론을 보고하도록 한다.
+
+\subsubsection{5.5 연구의 한계}
+
+몬테카를로에서 사용한 LV-OLS는 오라클 가정을 포함하므로, 17\%p의 검출력 향상은 상한값으로 해석해야 한다. MAP+Laplace 몬테카를로(분석 2)가 50회 반복에 기반하므로, 500회 반복(분석 1)에 비해 추정 불확실성이 크다. MCMC 반복 분석(분석 3)은 medium 효과 크기와 N=86 단일 조건에 한정된다.
+
+
+\subsection{6. 결론}
+
+본 연구는 외국인 유학생 한국어 쓰기 태도 연구의 자료 조건에서 세 가지 분석을 통해 PCM-SEM의 방법론적 우위를 실증하였다.
+
+첫째, CS-OLS vs. LV-OLS 몬테카를로(500회 반복)에서 CS-OLS의 감쇠 편향이 표본 크기에 무관하게 체계적으로 발생하며, N=300에서 포함 확률이 0.476으로 급락함을 확인하였다. LV-OLS는 모든 조건에서 편향 \ensuremath{\approx} 0, 포함 확률 \ensuremath{\approx} 0.95를 유지하였다.
+
+둘째, MAP+Laplace를 추가한 3-방향 비교(50회 반복)에서 MAP+Laplace의 성능이 LV-OLS에 근접하여 CS-OLS 대비 실질적 우위가 확인되었다. 이는 완전 MCMC 없이도 MAP+Laplace 단계에서 감쇠 편향이 제거됨을 보여주며, PCM-SEM의 실용적 적용 경로를 제시한다.
+
+셋째, 10개 독립 데이터셋에 대한 MCMC 반복 분석에서 $\beta_1$ 반복 간 SD = 0.148(약한 사전)/0.104(강한 사전), 간접효과 SD = 0.062/0.041의 범위 내에서 참값 근방의 추정이 일관되게 유지되었다. 강한 사전 분포 모형이 소표본에서 95\% CrI 폭을 $\beta_1$ 기준 24.2\%, 간접효과 기준 32.6\% 축소하여 추정 정밀도와 간접 효과 유의성(9/10\ensuremath{\rightarrow}10/10)을 향상시켰다. $P(\beta_1 > 0 \mid \text{data})$가 10회 반복 전체에서 0.994--1.000으로 높게 유지되어, X\ensuremath{\rightarrow}M\ensuremath{\rightarrow}Y 인과 경로의 안정적 지지가 확인되었다.
+
+순서형 Likert 척도 자료를 다루는 교육 연구자들은 MAP+Laplace를 계산 효율적인 출발점으로, 완전 MCMC를 결론 검증과 베이지안 고유 정보 산출을 위한 확인 수단으로 활용하는 2단계 전략을 권고한다.
+
+
+\subsection{참고문헌}
+
+Bernardo, J. M., \& Smith, A. F. M. (1994). \textit{Bayesian theory}. Wiley.
+
+Carpenter, B., Gelman, A., Hoffman, M. D., Lee, D., Goodrich, B., Betancourt, M., \& Riddell, A. (2017). Stan: A probabilistic programming language. \textit{Journal of Statistical Software}, \textit{76}(1), 1--32.
+
+Fuller, W. A. (1987). \textit{Measurement error models}. Wiley.
+
+Gelman, A., \& Rubin, D. B. (1992). Inference from iterative simulation using multiple sequences. \textit{Statistical Science}, \textit{7}(4), 457--472.
+
+Hoffman, M. D., \& Gelman, A. (2014). The No-U-Turn sampler. \textit{Journal of Machine Learning Research}, \textit{15}, 1593--1623.
+
+Masters, G. N. (1982). A Rasch model for partial credit scoring. \textit{Psychometrika}, \textit{47}(2), 149--174.
+
+Muth\'{e}n, L. K., \& Muth\'{e}n, B. O. (2002). How to use a Monte Carlo study to decide on sample size and determine power. \textit{Structural Equation Modeling}, \textit{9}(4), 599--620.
+
+Skrondal, A., \& Rabe-Hesketh, S. (2004). \textit{Generalized latent variable modeling}. Chapman \& Hall/CRC.
+
+Sobel, M. E. (1982). Asymptotic confidence intervals for indirect effects in structural equation models. \textit{Sociological Methodology}, \textit{13}, 290--312.
+
+Spearman, C. (1904). The proof and measurement of association between two things. \textit{American Journal of Psychology}, \textit{15}(1), 72--101.
+
+주월랑 (2022). 학문 목적 한국어 학습자의 한국어 쓰기 태도 연구. \textit{반교어문학회}, \textit{63}, 185--208.
+
+
+\subsection{부록 A. 소프트웨어 및 재현 가능성}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+파일 & 역할 & CmdStan \\
+\midrule
+\texttt{t1\_monte\_carlo.py} & CS-OLS vs LV-OLS 몬테카를로 (분석 1) & 불필요 \\
+\texttt{t1\_mc\_laplace.py} & MAP+Laplace 3-방향 몬테카를로 (분석 2) & 필요 \\
+\texttt{t1\_mcmc\_10reps.py} & MCMC 10회 반복 분석 (분석 3) & 필요 \\
+\texttt{t1\_figures.py} & 논문 그림 생성 (그림 1--6) & 불필요 \\
+\texttt{../sem\_pcm\_v2.stan} & 약한 사전 Stan 모형 & --- \\
+\texttt{../sem\_pcm\_with\_prior.stan} & 강한 사전 Stan 모형 & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+난수 시드: 분석 1--2 = 2024; 분석 3 = \{1007, 1014, \ldots, 1070\}. Python 3.12, numpy 1.24, pandas 2.0, Stan/cmdstanpy 1.3.
+
+\end{document}

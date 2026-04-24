@@ -19,7 +19,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# Set font to Malgun Gothic for Korean
+## Removed DroidSansFallbackFull font loading (Linux-only, not needed on Windows)
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
 import matplotlib.patches as mpatches
