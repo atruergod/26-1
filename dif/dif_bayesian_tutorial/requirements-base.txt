@@ -1,0 +1,10 @@
+# 모든 OS 공통 (Windows / Mac / Linux)
+numpy>=1.24
+scipy>=1.10
+pandas>=2.0
+matplotlib>=3.7
+seaborn>=0.12
+cmdstanpy>=1.2
+arviz>=0.16
+jupyter>=1.0
+ipykernel>=6.25
