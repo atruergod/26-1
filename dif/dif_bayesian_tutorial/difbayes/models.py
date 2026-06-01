@@ -20,9 +20,73 @@ from typing import Optional
 import importlib.util
 import platform
 import warnings
+import logging
+import contextlib
+import io
+import os
+import sys
 import numpy as np
 
 from .diagnostics import summarize_posterior
+
+
+# ---------------------------------------------------------------------------
+# 출력 최소화 — 반복 시뮬레이션에서 노트북 가시성 보호 (Quiet mode)
+# ---------------------------------------------------------------------------
+# 모듈 import 시 cmdstanpy 의 INFO 수준 로그를 영구적으로 약화시킴.
+# WARNING/ERROR 메시지(예: divergent transitions, low ESS)는 그대로 유지.
+def _configure_cmdstanpy_quiet() -> None:
+    """cmdstanpy 의 verbose INFO 로그를 WARNING 으로 격하."""
+    for name in ("cmdstanpy", "cmdstanpy.compiler", "cmdstanpy.utils",
+                 "cmdstanpy.stanfit", "cmdstanpy.model"):
+        lg = logging.getLogger(name)
+        lg.setLevel(logging.WARNING)
+
+
+_configure_cmdstanpy_quiet()
+
+
+@contextlib.contextmanager
+def _silenced_io(suppress: bool = True):
+    """stdout/stderr 를 임시로 흡수하는 context manager.
+
+    - Python 레벨의 print() 와 logging 핸들러의 stream 출력을 차단.
+    - cmdstanpy 가 spawn 하는 subprocess 의 OS 레벨 출력까지 차단하려면 fd 리다이렉트가 필요.
+    """
+    if not suppress:
+        yield
+        return
+
+    # Python sys.stdout/stderr 리다이렉트
+    stdout_buf = io.StringIO()
+    stderr_buf = io.StringIO()
+
+    # OS 레벨 file descriptor 리다이렉트 (subprocess 출력 포함)
+    devnull_fd = None
+    saved_stdout_fd = None
+    saved_stderr_fd = None
+    try:
+        devnull_fd = os.open(os.devnull, os.O_WRONLY)
+        saved_stdout_fd = os.dup(1)
+        saved_stderr_fd = os.dup(2)
+        os.dup2(devnull_fd, 1)
+        os.dup2(devnull_fd, 2)
+    except (OSError, AttributeError):
+        # 일부 환경(Jupyter)에서는 dup 불가 — Python 레벨만 차단
+        saved_stdout_fd = saved_stderr_fd = None
+
+    try:
+        with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(stderr_buf):
+            yield
+    finally:
+        if saved_stdout_fd is not None:
+            os.dup2(saved_stdout_fd, 1)
+            os.close(saved_stdout_fd)
+        if saved_stderr_fd is not None:
+            os.dup2(saved_stderr_fd, 2)
+            os.close(saved_stderr_fd)
+        if devnull_fd is not None:
+            os.close(devnull_fd)
 
 
 # ---------------------------------------------------------------------------
@@ -89,24 +153,37 @@ _NUMPYRO_MODULES = {
 # Stan 적합
 # ---------------------------------------------------------------------------
 def _fit_stan(model_name: str, data: dict, n_chains: int, n_warmup: int,
-              n_samples: int, seed: int) -> dict:
+              n_samples: int, seed: int, verbose: bool = False) -> dict:
+    """Stan(cmdstanpy) 기반 적합.
+
+    Parameters
+    ----------
+    verbose : bool, default False
+        True 면 모형 경로/컴파일 메시지와 cmdstanpy INFO 출력을 표시.
+        False 면 모든 stdout/stderr 와 INFO 로그를 흡수하여 노트북을 깔끔하게 유지.
+        WARNING/ERROR(예: divergent transitions) 메시지는 항상 통과.
+    """
     import cmdstanpy
     stan_file = _stan_dir() / _STAN_FILES[model_name]
-    print(f"[difbayes] Resolving Stan model file: {stan_file} ...")
+    if verbose:
+        print(f"[difbayes] Resolving Stan model file: {stan_file} ...")
     if not stan_file.exists():
         raise FileNotFoundError(f"Stan model not found: {stan_file}")
-    else:
+    if verbose:
         print(f"[difbayes] Compiling Stan model: {stan_file.name} ...")
-    model = cmdstanpy.CmdStanModel(stan_file=str(stan_file))
-    fit = model.sample(
-        data=data,
-        chains=n_chains,
-        iter_warmup=n_warmup,
-        iter_sampling=n_samples,
-        seed=seed,
-        show_progress=False,
-        show_console=False,
-    )
+
+    with _silenced_io(suppress=not verbose):
+        model = cmdstanpy.CmdStanModel(stan_file=str(stan_file))
+        fit = model.sample(
+            data=data,
+            chains=n_chains,
+            iter_warmup=n_warmup,
+            iter_sampling=n_samples,
+            seed=seed,
+            show_progress=False,
+            show_console=False,
+        )
+
     # cmdstanpy → dict of arrays (n_chains, n_draws, ...)
     samples = {}
     raw = fit.stan_variables()
@@ -127,7 +204,7 @@ def _fit_stan(model_name: str, data: dict, n_chains: int, n_warmup: int,
 # NumPyro 적합
 # ---------------------------------------------------------------------------
 def _fit_numpyro(model_name: str, data: dict, n_chains: int, n_warmup: int,
-                 n_samples: int, seed: int) -> dict:
+                 n_samples: int, seed: int, verbose: bool = False) -> dict:
     # numpyro 모듈을 동적으로 로드
     import importlib.util as _ilu
     module_file = _numpyro_dir() / f"{_NUMPYRO_MODULES[model_name]}.py"
@@ -150,7 +227,7 @@ def _fit_numpyro(model_name: str, data: dict, n_chains: int, n_warmup: int,
                 num_warmup=n_warmup,
                 num_samples=n_samples,
                 num_chains=n_chains,
-                progress_bar=False)
+                progress_bar=verbose)  # verbose=True 시에만 진행 표시줄 출력
 
     rng_key = jax.random.PRNGKey(seed)
     # data dict의 ndarray들을 jnp.array로 변환
@@ -160,7 +237,8 @@ def _fit_numpyro(model_name: str, data: dict, n_chains: int, n_warmup: int,
             data_jax[k] = jnp.asarray(v)
         else:
             data_jax[k] = v
-    mcmc.run(rng_key, **data_jax)
+    with _silenced_io(suppress=not verbose):
+        mcmc.run(rng_key, **data_jax)
 
     raw = mcmc.get_samples(group_by_chain=True)
     samples = {k: np.asarray(v) for k, v in raw.items()}
@@ -173,8 +251,13 @@ def _fit_numpyro(model_name: str, data: dict, n_chains: int, n_warmup: int,
 # ---------------------------------------------------------------------------
 def fit_rasch_basic(Y: np.ndarray, backend: str = "stan",
                     n_chains: int = 4, n_warmup: int = 500,
-                    n_samples: int = 1000, seed: int = 2026) -> dict:
-    """DIF 없음 가정의 기본 1PL Rasch 모형."""
+                    n_samples: int = 1000, seed: int = 2026,
+                    verbose: bool = False) -> dict:
+    """DIF 없음 가정의 기본 1PL Rasch 모형.
+
+    verbose=False (기본) — 노트북 가시성 보호용 quiet mode.
+    반복 시뮬레이션에는 verbose=False 권장. 첫 컴파일 확인 시 verbose=True.
+    """
     N, J = Y.shape
     # long format
     i_idx = np.repeat(np.arange(N), J) + 1
@@ -184,14 +267,19 @@ def fit_rasch_basic(Y: np.ndarray, backend: str = "stan",
                 ii=i_idx, jj=j_idx, y=y_flat)
     backend = resolve_backend(backend)
     if backend == "stan":
-        return _fit_stan("rasch_basic", data, n_chains, n_warmup, n_samples, seed)
-    return _fit_numpyro("rasch_basic", data, n_chains, n_warmup, n_samples, seed)
+        return _fit_stan("rasch_basic", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
+    return _fit_numpyro("rasch_basic", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
 
 
 def fit_rasch_dif(Y, group, backend="stan",
                   n_chains=4, n_warmup=500, n_samples=1000,
-                  prior_sigma_delta: float = 1.0, seed=2026) -> dict:
-    """문항별 독립 Δb 를 가진 1PL Rasch DIF 모형 (non-hierarchical)."""
+                  prior_sigma_delta: float = 1.0, seed=2026,
+                  verbose: bool = False) -> dict:
+    """문항별 독립 Δb 를 가진 1PL Rasch DIF 모형 (non-hierarchical).
+
+    verbose=False (기본) — 노트북 가시성 보호용 quiet mode.
+    반복 시뮬레이션에는 verbose=False 권장.
+    """
     N, J = Y.shape
     i_idx = np.repeat(np.arange(N), J) + 1
     j_idx = np.tile(np.arange(J), N) + 1
@@ -202,13 +290,13 @@ def fit_rasch_dif(Y, group, backend="stan",
                 prior_sigma_delta=float(prior_sigma_delta))
     backend = resolve_backend(backend)
     if backend == "stan":
-        return _fit_stan("rasch_dif", data, n_chains, n_warmup, n_samples, seed)
-    return _fit_numpyro("rasch_dif", data, n_chains, n_warmup, n_samples, seed)
+        return _fit_stan("rasch_dif", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
+    return _fit_numpyro("rasch_dif", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
 
 
 def fit_rasch_hierarchical_dif(Y, group, backend="stan",
                                n_chains=4, n_warmup=500, n_samples=1000,
-                               seed=2026) -> dict:
+                               seed=2026, verbose: bool = False) -> dict:
     """위계 Δb_j ~ N(0, τ²) 1PL Rasch DIF 모형."""
     N, J = Y.shape
     i_idx = np.repeat(np.arange(N), J) + 1
@@ -219,14 +307,14 @@ def fit_rasch_hierarchical_dif(Y, group, backend="stan",
                 ii=i_idx, jj=j_idx, gg=g_idx, y=y_flat)
     backend = resolve_backend(backend)
     if backend == "stan":
-        return _fit_stan("rasch_hierarchical_dif", data, n_chains, n_warmup, n_samples, seed)
-    return _fit_numpyro("rasch_hierarchical_dif", data, n_chains, n_warmup, n_samples, seed)
+        return _fit_stan("rasch_hierarchical_dif", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
+    return _fit_numpyro("rasch_hierarchical_dif", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
 
 
 def fit_rasch_spike_slab(Y, group, backend="stan",
                          n_chains=4, n_warmup=800, n_samples=1500,
                          slab_sd: float = 1.0, prior_inclusion: float = 0.2,
-                         seed=2026) -> dict:
+                         seed=2026, verbose: bool = False) -> dict:
     """Spike-and-slab prior로 anchor-free DIF 검출."""
     N, J = Y.shape
     i_idx = np.repeat(np.arange(N), J) + 1
@@ -239,13 +327,13 @@ def fit_rasch_spike_slab(Y, group, backend="stan",
                 prior_inclusion=float(prior_inclusion))
     backend = resolve_backend(backend)
     if backend == "stan":
-        return _fit_stan("rasch_spike_slab", data, n_chains, n_warmup, n_samples, seed)
-    return _fit_numpyro("rasch_spike_slab", data, n_chains, n_warmup, n_samples, seed)
+        return _fit_stan("rasch_spike_slab", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
+    return _fit_numpyro("rasch_spike_slab", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
 
 
 def fit_rasch_horseshoe(Y, group, backend="stan",
                         n_chains=4, n_warmup=800, n_samples=1500,
-                        seed=2026) -> dict:
+                        seed=2026, verbose: bool = False) -> dict:
     """Horseshoe prior로 anchor-free DIF 검출."""
     N, J = Y.shape
     i_idx = np.repeat(np.arange(N), J) + 1
@@ -256,13 +344,13 @@ def fit_rasch_horseshoe(Y, group, backend="stan",
                 ii=i_idx, jj=j_idx, gg=g_idx, y=y_flat)
     backend = resolve_backend(backend)
     if backend == "stan":
-        return _fit_stan("rasch_horseshoe", data, n_chains, n_warmup, n_samples, seed)
-    return _fit_numpyro("rasch_horseshoe", data, n_chains, n_warmup, n_samples, seed)
+        return _fit_stan("rasch_horseshoe", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
+    return _fit_numpyro("rasch_horseshoe", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
 
 
 def fit_2pl_dif(Y, group, backend="stan",
                 n_chains=4, n_warmup=800, n_samples=1500,
-                seed=2026) -> dict:
+                seed=2026, verbose: bool = False) -> dict:
     """2PL DIF: Δa(log-multiplicative) + Δb (uniform) 동시 추정."""
     N, J = Y.shape
     i_idx = np.repeat(np.arange(N), J) + 1
@@ -273,5 +361,5 @@ def fit_2pl_dif(Y, group, backend="stan",
                 ii=i_idx, jj=j_idx, gg=g_idx, y=y_flat)
     backend = resolve_backend(backend)
     if backend == "stan":
-        return _fit_stan("rasch_2pl_dif", data, n_chains, n_warmup, n_samples, seed)
-    return _fit_numpyro("rasch_2pl_dif", data, n_chains, n_warmup, n_samples, seed)
+        return _fit_stan("rasch_2pl_dif", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
+    return _fit_numpyro("rasch_2pl_dif", data, n_chains, n_warmup, n_samples, seed, verbose=verbose)
