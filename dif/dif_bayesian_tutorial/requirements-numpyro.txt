@@ -1,0 +1,5 @@
+# 선택 사항: NumPyro 백엔드 (Mac / Linux 권장)
+# Windows에서는 jax 공식 빌드 부재로 설치가 어렵습니다.
+jax>=0.4.20
+jaxlib>=0.4.20
+numpyro>=0.13

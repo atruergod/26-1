@@ -1,0 +1,8 @@
+N = 86
+K = 21
+seed = 20230518
+sigma_item = 0.686171551265602
+cronbach_alpha = 0.8544845845922471
+item_type = integer Likert 1-5
+subscale_type = real-valued (mean of integer items)
+T_score_note = derived composite = mean(P_score, R_score, A_score)
